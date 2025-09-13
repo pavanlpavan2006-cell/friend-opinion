@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Q&A Time 🎯</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Quicksand', sans-serif;
+    color: #222;
+    background: #000; /* fallback if image doesn't load */
+  }
+
+  /* Hero full-screen background */
+  .hero {
+    height: 100vh;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7)),
+                url('https://images.pexels.com/photos/207691/pexels-photo-207691.jpeg') no-repeat center center fixed;
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+  }
+
+  /* Clean 3D monospace heading in pink */
+  .hero h1 {
+    font-family: 'Courier New', monospace; /* monospace font */
+    font-size: 4em;
+    font-weight: 900;
+    color: #ff3ea0; /* solid pink */
+    text-shadow:
+      2px 2px 0 #d63a8c,
+      4px 4px 0 #c33884,
+      6px 6px 0 #a12c6b,
+      8px 8px 0 #801f53; /* 3D layered shadow in darker pinks */
+  }
+
+  .quiz-container {
+    max-width: 600px;
+    margin: 80px auto;
+    padding: 30px 40px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    color: #222;
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 1s ease, transform 1s ease;
+  }
+
+  .quiz-container.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .question {
+    font-size: 1.6em;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  button.option-btn {
+    background: linear-gradient(135deg, #ffd6d6, #ffc0c0);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  button.option-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  }
+
+  button.option-btn:disabled {
+    background: #ddd;
+    color: #888;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  #response {
+    margin-top: 20px;
+    font-size: 1.15em;
+    font-weight: 500;
+    min-height: 60px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f9f5f5;
+    color: #222;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #nextBtn, #askMeBtn, #restartBtn {
+    margin-top: 25px;
+    background: linear-gradient(135deg, #ffd6d6, #ffc0c0);
+    border: none;
+    border-radius: 14px;
+    padding: 12px 35px;
+    font-weight: 600;
+    font-size: 1em;
+    cursor: pointer;
+    display: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  #nextBtn:hover, #askMeBtn:hover, #restartBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Mini Q&A Time 🎯</h1>
+</div>
+
+<div class="quiz-container" id="quizContainer">
+  <div class="question" id="question">Loading...</div>
+  <div class="options" id="options"></div>
+  <div id="response"></div>
+  <button id="askMeBtn" onclick="nextQuestion()">Ask me</button>
+  <button id="nextBtn" onclick="nextQuestion()">Next</button>
+  <button id="restartBtn" onclick="restartQuiz()">Replay</button>
+</div>
+
+<script>
+const quiz = [
+  { question: "Hey! It's been a while since PU days. How are you doing these days?", options: [{ text: "I'm doing good!", response: "That's great! 😄 I'm really happy to hear that." }, { text: "Life is busy", response: "Yeah, college can get busy, but you’re handling it well, I’m sure!" }] },
+  { question: "How’s engineering college life treating you?", options: [{ text: "Really good!", response: "Awesome! Glad you’re enjoying it. 🎉" }, { text: "A bit stressful", response: "Yeah, engineering can be stressful, but you’ve always been strong — you got this. 💪" }] },
+  { question: "Which do you enjoy more – classes or hanging out with friends?", options: [{ text: "Classes", response: "Nice! You must be loving the subjects." }, { text: "Friends", response: "Haha, same here! Friends make college life the best. 😄" }] },
+  { question: "Can I share something with you?", options: [{ text: "Yes", response: "Here it is" }, { text: "No", response: "This option is not selectable.", disabled: true }] },
+  { question: "You were a really good friend in my life. I’m so grateful that we’re in the same college again. Thanks for being my friend!", options: [{ text: "Aww, same to you!", response: "That means a lot to me. 😊" }, { text: "Ok", response: "Haha, I’ll take that as a yes! 😄" }] },
+  { question: "Let’s catch up more in college soon!", options: [{ text: "Sure!", response: "Yay! Looking forward to it. 🤗" }, { text: "Maybe", response: "No worries, whenever you’re free. 👍" }] }
+];
+
+let currentIndex = 0;
+const quizContainer = document.getElementById("quizContainer");
+const questionEl = document.getElementById("question");
+const optionsEl = document.getElementById("options");
+const responseEl = document.getElementById("response");
+const nextBtn = document.getElementById("nextBtn");
+const askMeBtn = document.getElementById("askMeBtn");
+const restartBtn = document.getElementById("restartBtn");
+
+// Show quiz when user scrolls to it
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){
+      quizContainer.classList.add('visible');
+      observer.disconnect();
+    }
+  });
+},{ threshold: 0.3 });
+observer.observe(quizContainer);
+
+function loadQuestion() {
+  const current = quiz[currentIndex];
+  questionEl.textContent = current.question;
+  optionsEl.innerHTML = "";
+  responseEl.style.opacity = 0;
+  nextBtn.style.display = "none";
+  askMeBtn.style.display = "none";
+
+  current.options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.textContent = opt.text;
+    btn.className = "option-btn";
+    if(opt.disabled) btn.disabled = true;
+    btn.onclick = () => {
+      responseEl.textContent = opt.response;
+      responseEl.style.opacity = 1;
+      if(opt.response === "Here it is" && currentIndex === 3) askMeBtn.style.display = "inline-block";
+      else nextBtn.style.display = "inline-block";
+      Array.from(optionsEl.children).forEach(b => b.disabled = true);
+    };
+    optionsEl.appendChild(btn);
+  });
+}
+
+function nextQuestion() {
+  currentIndex++;
+  if(currentIndex >= quiz.length){
+    questionEl.textContent = "Thank you for answering! 😊";
+    optionsEl.innerHTML = "";
+    responseEl.textContent = "";
+    nextBtn.style.display = "none";
+    askMeBtn.style.display = "none";
+    restartBtn.style.display = "inline-block"; // show Replay button
+  } else {
+    loadQuestion();
+  }
+}
+
+function restartQuiz() {
+  currentIndex = 0;
+  restartBtn.style.display = "none";
+  loadQuestion();
+}
+
+loadQuestion();
+</script>
+
+</body>
+</html>
